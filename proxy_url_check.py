@@ -76,8 +76,8 @@ def generate_urls():
 			lines.append(line)
 
 
-valid_url_file_lock = threading.valid_url_file_lock()
-invalid_url_file_valid_url_file_lock = threading.valid_url_file_lock()
+valid_url_file_lock = threading.Lock()
+invalid_url_file_valid_url_file_lock = threading.Lock()
 
 def remove_completed():
 	with open("logs/invalid.txt") as completed:
