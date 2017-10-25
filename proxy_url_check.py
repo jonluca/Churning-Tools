@@ -29,6 +29,7 @@ list_of_proxies = ["210.212.73.61:80", "35.161.5.60:3128", "203.74.4.3:80",
 # Globals
 proxy = list_of_proxies[0]
 connectionPerSec = 50
+prefix = "boa"
 
 # Useful combinations
 num = '0123456789'
@@ -36,14 +37,25 @@ a_z = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 numAZ = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # URL parameters
-front = "https://www.barclaycardus.com/apply/Landing.action?campaignId="
-end = "&cellNumber="
+# front = "https://www.barclaycardus.com/apply/Landing.action?campaignId="
+front = "https://secure.bankofamerica.com/applynow/initialize-workflow.go?requesttype=c&campaignid=402"
+end = "&productoffercode=PS&locale=en_US"
+# end = "&cellNumber="
 lines = []
 current_line = 0
 
 
+def generate_boa_urls():
+	for (a) in map(''.join, itertools.product(num, repeat=4)):
+		# for (b) in itertools.imap(''.join, itertools.product(numAZ, repeat=2)):
+		line = front
+		line += a
+		line += end
+		lines.append(line)
+
+
 # Creates all URL combinations based on parameters above and stores them in a lines global var
-def generate_urls():
+def generate_barclay_urls():
 	for (a) in map(''.join, itertools.product(num, repeat=4)):
 		# for (b) in itertools.imap(''.join, itertools.product(numAZ, repeat=2)):
 		for (cell) in map(''.join, itertools.product(num, repeat=1)):
@@ -62,18 +74,21 @@ invalid_url_file_lock = threading.Lock()
 # Often times, the script will need to be interrupted midway through. This will remove all invalid from the testing lines
 # Pretty fast (roughly 20s to check 100,000 urls)
 def remove_completed():
-	with open("logs/invalid.txt") as completed:
-		for line in completed:
-			temp_line = line[5:]
-			if temp_line.rstrip("\n") in lines:
-				lines.remove(temp_line.rstrip("\n"))
+	try:
+		with open("logs/" + prefix + "_invalid.txt") as completed:
+			for line in completed:
+				temp_line = line[5:]
+				if temp_line.rstrip("\n") in lines:
+					lines.remove(temp_line.rstrip("\n"))
+	except:
+		pass
 
 
 # Write a valid url to file
 def write_valid_url(res):
 	valid_url_file_lock.acquire()  # thread stops at this line until it can obtain valid_url_file_lock
 
-	with open("logs/valid.txt", "a") as myfile:
+	with open("logs/" + prefix + "_valid.txt", "a") as myfile:
 		myfile.write(res)
 		myfile.write('\n')
 	valid_url_file_lock.release()
@@ -83,7 +98,7 @@ def write_valid_url(res):
 def write_invalid_url(ret):
 	invalid_url_file_lock.acquire()  # thread stops at this line until it can obtain valid_url_file_lock
 
-	with open("logs/invalid.txt", "a") as myfile:
+	with open("logs/" + prefix + "_invalid.txt", "a") as myfile:
 		myfile.write(ret)
 		myfile.write('\n')
 	invalid_url_file_lock.release()
@@ -92,10 +107,16 @@ def write_invalid_url(ret):
 def retry(ret):
 	invalid_url_file_lock.acquire()  # thread stops at this line until it can obtain valid_url_file_lock
 
-	with open("logs/retry.txt", "a") as myfile:
+	with open("logs/" + prefix + "_retry.txt", "a") as myfile:
 		myfile.write(ret)
 		myfile.write('\n')
 	invalid_url_file_lock.release()
+
+
+def retry_urls():
+	with open("logs/" + prefix + "_retry.txt") as myfile:
+		for line in myfile:
+			lines.append(line)
 
 
 def get_url():
@@ -119,13 +140,13 @@ def generate_req(reqSession):
 		# If it fails for any reason, add it to the retry list
 		try:
 			response = reqSession.get(url, headers=headers, proxies={"http": proxy},
-			                          allow_redirects=False)
+			                          allow_redirects=True)
 		except:
 			retry(url)
 		print('Completed url: ' + url, end='\r')
 
 		# This part needs to change based on what company you're scrpaing. For Barclays, valid app links will include the following in the header
-		if "Secure Credit Card Application" not in response.text:
+		if "check-parameters" in response.url:
 			write_invalid_url(url)
 			continue
 		# In case we get ratelimited, set up a new proxy and add file to retry
@@ -138,8 +159,12 @@ def generate_req(reqSession):
 
 
 def main():
-	generate_urls()
+	generate_boa_urls()
 	remove_completed()
+	
+	# Uncomment this to only check the ones that need to be retried
+	# retry_urls()
+
 
 	# generate threads based on conccurent connections global
 	for cnum in range(connectionPerSec):
