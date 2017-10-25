@@ -141,9 +141,6 @@ def main():
 	generate_urls()
 	remove_completed()
 
-	proxy = list_of_proxies[0]
-	current_line = 0
-
 	# generate threads based on conccurent connections global
 	for cnum in range(connectionPerSec):
 		s1 = requests.session()
