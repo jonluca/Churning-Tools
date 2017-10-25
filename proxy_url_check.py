@@ -6,6 +6,9 @@ from fake_useragent import UserAgent
 
 ua = UserAgent()
 
+
+# Update this with 20 - 100 proxies from https://free-proxy-list.net/ on every run
+# If your URL requires https, make sure you filter proxies on whether they support it
 list_of_proxies = [
 	"210.212.73.61:80",
 "35.161.5.60:3128",
