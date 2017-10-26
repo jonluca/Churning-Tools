@@ -2,7 +2,7 @@
 
 These are going to be a collection of random python files that aid in my churning hobby. They're mostly centered around modern web scraping.
 
-### proxy_url_check.py
+### multithreaded_proxy_churner.py
 
 Bulk of the program - a multithreaded, proxied web scraper that generates lists of valid and invalid files
 

@@ -161,7 +161,7 @@ def generate_req(reqSession):
 def main():
 	generate_boa_urls()
 	remove_completed()
-	
+
 	# Uncomment this to only check the ones that need to be retried
 	# retry_urls()
 
